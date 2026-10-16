@@ -16,7 +16,6 @@
   const $ = s => document.querySelector(s);
   const READ_MS = 2 * 60 * 1000, RELOAD_MS = 6 * 60 * 60 * 1000;
   const BASE = { lat: 52.395708, lon: -1.7956, label: 'FLR · B90 4NZ' };
-  const GROUP_M = 250;   // vehicles closer than this share one label (e.g. everyone at B90 4NZ)
 
   const key = (() => {
     const m = /(?:^|[#&?])k=([0-9a-f]{64})\b/.exec(location.hash + '&' + location.search);
@@ -74,29 +73,56 @@
     const rad = x => x * Math.PI / 180, q = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2;
     return 2 * 6371000 * Math.asin(Math.sqrt(q));
   }
-  // Vehicles within 250 m of each other become one group with one label ("Dan Byrne · Mark Kenyon +4")
-  function groups(vans) {
+  // Who's where, made readable across a room: on the map each vehicle, or each bunch of vehicles that would overlap at
+  // this zoom (within 44 px on screen), is one numbered badge; the list on the right says who each number is and where.
+  const BUNCH_PX = 30, AT_BASE_M = 400;
+  const fmtMiles = m => m < 10 ? m.toFixed(1) : String(Math.round(m));
+  function stateOf(v) {
+    const seen = new Date(v.seenAt), age = (Date.now() - seen) / 60000;
+    if (age > 30) return { cls: 'old', text: `Last seen ${seen.toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}` };
+    if (v.ignition && (v.speed || 0) > 3) return { cls: 'moving', text: 'Driving' };
+    if (v.ignition) return { cls: 'on', text: 'Engine on' };
+    if (v.stopAt && v.stopSeen) return { cls: 'parked', text: `Parked since ${fmtTime.format(new Date(v.stopAt))}` };
+    return { cls: 'parked', text: 'Parked' };
+  }
+  function bunches(vans) {
+    const pt = v => map.latLngToContainerPoint([v.lat, v.lon]);
     const out = [];
-    for (const v of vans) {
-      const g = out.find(x => metres(x.at, v) < GROUP_M);
-      if (g) g.vans.push(v); else out.push({ at: { lat: v.lat, lon: v.lon }, vans: [v] });
+    // Everyone at the yard is always one group of its own, however far out the map is zoomed
+    const home = vans.filter(v => metres(BASE, v) < AT_BASE_M);
+    if (home.length) out.push({ p: pt(BASE), at: { lat: BASE.lat, lon: BASE.lon }, vans: home, home: true });
+    for (const v of vans.filter(x => metres(BASE, x) >= AT_BASE_M)) {
+      const p = pt(v);
+      const g = out.find(x => !x.home && Math.hypot(x.p.x - p.x, x.p.y - p.y) < BUNCH_PX);
+      if (g) g.vans.push(v); else out.push({ p, at: { lat: v.lat, lon: v.lon }, vans: [v] });
     }
-    return out;
+    for (const g of out) {
+      g.miles = Math.min(...g.vans.map(v => metres(BASE, v))) / 1609.34;
+      g.atBase = !!g.home;
+    }
+    return out.sort((x, y) => (y.atBase - x.atBase) || x.miles - y.miles).map((g, i) => ({ ...g, n: i + 1 }));
   }
-  function vehicleIcon(v, count) {
-    const kind = vehKind(v), im = VEH[kind];
-    const age = (Date.now() - new Date(v.seenAt)) / 60000, moving = v.ignition && (v.speed || 0) > 3;
-    const cls = ['vmark', moving ? 'moving' : 'parked', age > 30 ? 'old' : ''].filter(Boolean).join(' ');
-    return L.divIcon({ className: cls, iconSize: [0, 0], html: h('div', null, h('span', { class: 'halo' }),
-      im ? h('img', { class: `vimg vk-${kind}`, src: im[1], alt: '' }) : null, count > 1 ? h('span', { class: 'count' }, String(count)) : null) });
+  function badgeIcon(g) {
+    const v = g.vans[0], kind = vehKind(v), im = VEH[kind], st = stateOf(v);
+    return L.divIcon({ className: `vmark ${st.cls}`, iconSize: [0, 0], html: h('div', null, h('span', { class: 'halo' }),
+      im ? h('img', { class: `vimg vk-${kind}`, src: im[1], alt: '' }) : null, h('span', { class: 'num' }, String(g.n))) });
   }
-  function label(g) {
-    const named = g.vans.map(v => ({ who: v.who || 'Unassigned', plate: v.plate || v.reg }));
-    const el = h('div', null);
-    const first = named.slice(0, g.vans.length > 3 ? 2 : 3);
-    first.forEach((n, i) => { if (i) el.append(' · '); el.append(n.who, h('span', { class: 'pl' }, n.plate)); });
-    if (named.length > first.length) el.append(h('span', { class: 'more' }, `+${named.length - first.length} more: ${named.slice(first.length).map(n => n.who).join(', ')}`));
-    return el;
+  function list(gs, total) {
+    const rows = gs.map(g => h('li', { class: `row${g.atBase ? ' base' : ''}` },
+      h('span', { class: 'num' }, String(g.n)),
+      h('div', { class: 'who' },
+        h('div', { class: 'where' }, g.atBase ? `At FLR · B90 4NZ · ${g.vans.length}` : `${fmtMiles(g.miles)} mi from FLR`,
+          g.vans.length === 1 ? h('span', { class: 'st' }, ` · ${stateOf(g.vans[0]).text}`) : null),
+        h('div', { class: 'chips' }, g.vans.map(v => { const st = stateOf(v);
+          return h('span', { class: `chip ${st.cls}`, title: st.text }, h('i', { class: 'dot' }), h('b', null, v.who || 'Unassigned'), h('span', { class: 'pl' }, v.plate || v.reg)); })),
+      )));
+    $('#list').replaceChildren(h('h2', null, 'Who’s where'),
+      h('p', { class: 'sub' }, `${total} vehicles · `, h('i', { class: 'dot moving' }), ' driving ', h('i', { class: 'dot parked' }), ' parked'),
+      h('ol', null, rows));
+    // Everyone has to fit on the TV: if the list is too long, step the text down until it fits
+    const ol = $('#list ol');
+    $('#list').classList.remove('s1', 's2', 's3');
+    for (const step of ['s1', 's2', 's3']) { if (ol.scrollHeight <= ol.clientHeight + 1) break; $('#list').classList.add(step); }
   }
 
   function draw(d) {
@@ -106,21 +132,20 @@
     const radar = h('div', { class: 'radar' }, h('span', { class: 'r-ring r1' }), h('span', { class: 'r-ring r2' }), h('span', { class: 'r-ring r3' }),
       h('span', { class: 'r-sweep' }), h('span', { class: 'r-pulse' }), h('span', { class: 'r-dot' }));
     L.marker([BASE.lat, BASE.lon], { icon: L.divIcon({ className: 'sitemark', html: radar, iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: -1000 })
-      .bindTooltip(BASE.label, { className: 'nm base', direction: 'bottom', offset: [0, 14], permanent: true }).addTo(layer);
+      .bindTooltip('FLR · B90 4NZ', { className: 'nm base', direction: 'bottom', offset: [0, 16], permanent: true }).addTo(layer);
     const vans = (d.vans || []).filter(v => Number.isFinite(v.lat) && Number.isFinite(v.lon) && !isNaN(new Date(v.seenAt)));
-    const pts = [[BASE.lat, BASE.lon]];
-    for (const g of groups(vans)) {
-      L.marker([g.at.lat, g.at.lon], { icon: vehicleIcon(g.vans[0], g.vans.length), interactive: false, keyboard: false })
-        .bindTooltip(label(g), { className: 'nm', direction: 'top', offset: [0, -24], permanent: true }).addTo(layer);
-      pts.push([g.at.lat, g.at.lon]);
-    }
-    // Frame everyone (and B90 4NZ), leaving room for the bar at the top
+    // Frame everyone (and B90 4NZ) in the space left of the list, then bunch at that zoom
+    const pts = [[BASE.lat, BASE.lon], ...vans.map(v => [v.lat, v.lon])];
     M.invalidateSize();
-    M.fitBounds(L.latLngBounds(pts).pad(0.08), { paddingTopLeft: [60, 130], paddingBottomRight: [60, 60], maxZoom: 11, animate: false });
+    M.fitBounds(L.latLngBounds(pts).pad(0.06), { paddingTopLeft: [70, 130], paddingBottomRight: [LIST_W + 70, 70], maxZoom: 11, animate: false });
+    const gs = bunches(vans);
+    for (const g of gs) L.marker([g.at.lat, g.at.lon], { icon: badgeIcon(g), interactive: false, keyboard: false, zIndexOffset: 500 - g.n }).addTo(layer);
+    list(gs, vans.length);
     const ok = d.fleetviewAt ? new Date(d.fleetviewAt) : null;
     $('#status').textContent = `${vans.length} vehicles · FleetView ${ok ? fmtTime.format(ok) : '—'}`;
     $('#status').classList.toggle('stale', !ok || d.fleetviewFailing || Date.now() - ok > 15 * 60000);
   }
+  const LIST_W = 470;
 
   /* ---------------------------------------------------------------- reading */
   let sb = null, failures = 0;

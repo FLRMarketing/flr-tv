@@ -6,7 +6,7 @@ html,body{margin:0;height:100%;background:#0b0c10;color:#f5f5f7;font:16px/1.4 -a
 .leaflet-control-container .leaflet-top,.leaflet-control-zoom{display:none}
 .leaflet-control-attribution{font-size:10px;background:rgba(0,0,0,.45) !important;color:#ccc}
 .leaflet-control-attribution a{color:#ddd}
-.bar{position:fixed;z-index:800;top:18px;left:18px;right:18px;display:flex;align-items:center;gap:18px;pointer-events:none}
+.bar{position:fixed;z-index:800;top:18px;left:18px;right:506px;display:flex;align-items:center;gap:18px;pointer-events:none}
 .bar>*{padding:12px 18px;border-radius:16px;background:rgba(18,18,22,.82);box-shadow:0 0 0 .5px rgba(255,255,255,.1),0 10px 30px rgba(0,0,0,.4)}
 .title{display:flex;align-items:center;gap:12px;font:700 26px/1 inherit;letter-spacing:-.01em}
 .brand{padding:4px 9px;border-radius:7px;background:#00098b;color:#fff;font:800 18px/1 inherit;letter-spacing:.06em}
@@ -43,3 +43,42 @@ html,body{margin:0;height:100%;background:#0b0c10;color:#f5f5f7;font:16px/1.4 -a
 .message{position:fixed;inset:0;z-index:900;display:grid;place-content:center;gap:10px;padding:40px;text-align:center;background:#0b0c10}
 .message h1{margin:0;font-size:40px}
 .message p{margin:0;font-size:22px;color:#aeaeb2;max-width:46ch}
+/* 1.1: numbered badges on the map, and who's who in the list on the right */
+.vmark .num{position:absolute;left:12px;top:-30px;min-width:30px;height:30px;padding:0 8px;border-radius:15px;background:#00098b;color:#fff;
+  font:800 17px/30px ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;text-align:center;box-shadow:0 0 0 2.5px #fff,0 4px 10px rgba(0,0,0,.45)}
+.vmark.moving .num{background:#1d8a3a}
+.list{position:fixed;z-index:800;top:18px;right:18px;bottom:18px;width:470px;display:flex;flex-direction:column;padding:18px 18px 10px;border-radius:18px;
+  background:rgba(18,18,22,.86);box-shadow:0 0 0 .5px rgba(255,255,255,.1),0 10px 30px rgba(0,0,0,.45);overflow:hidden}
+.list:empty{display:none}
+.list h2{margin:0;font:800 26px/1.1 inherit;letter-spacing:-.01em}
+.list .sub{margin:4px 0 10px;color:#aeaeb2;font-size:15px}
+.list ol{list-style:none;margin:0;padding:0;overflow:hidden;flex:1;display:flex;flex-direction:column;gap:2px}
+.list .row{display:grid;grid-template-columns:38px minmax(0,1fr);gap:12px;align-items:start;padding:8px 6px;border-top:1px solid rgba(255,255,255,.08)}
+.list .row:first-child{border-top:0}
+.list .row.base{background:rgba(0,9,139,.35);border-radius:12px;border-top:0;margin-bottom:4px}
+.list .num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:17px;background:#00098b;color:#fff;font:800 17px/1 ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;box-shadow:0 0 0 2px #fff}
+.list .who{display:grid;gap:3px;min-width:0}
+.list .p{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:17px}
+.list .p b{font-weight:700}
+.list .pl{padding:1px 5px;border-radius:4px;background:#f8d33a;color:#111;font:700 12px/1.3 "Roboto Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.06em}
+.list .st{color:#aeaeb2;font-size:14px}
+.list .st.moving{color:#5bd87a}
+.list .st.old{color:#8e8e93}
+.list .where{color:#d1d1d6;font-size:14px;font-weight:600}
+/* 1.1b: a group's people side by side as chips; a dot for driving / parked */
+.list .row{gap:10px;padding:7px 6px}
+.list .where{font-size:15px;color:#fff;font-weight:700}
+.list .chips{display:flex;flex-wrap:wrap;gap:5px 6px}
+.list .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px 3px 6px;border-radius:8px;background:rgba(255,255,255,.08);font-size:15px}
+.list .chip b{font-weight:650}
+.list .chip .pl{font-size:10.5px;padding:1px 4px}
+.list .dot,.list .sub .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#aeaeb2;flex:none}
+.list .chip.moving .dot,.list .dot.moving{background:#30d158}
+.list .chip.on .dot{background:#ffd60a}
+.list .chip.old{opacity:.6}
+.list .st{font-size:13.5px;color:#aeaeb2}
+.list .sub .dot{margin:0 3px 0 6px;vertical-align:0}
+/* the list steps its text down when it would run off the screen */
+.list.s1 .chip{font-size:14px;padding:2px 6px 2px 5px}.list.s1 .row{padding:5px 6px}.list.s1 .where{font-size:14px}
+.list.s2 .chip{font-size:13px}.list.s2 .row{padding:3px 6px;gap:8px}.list.s2 .num{width:28px;height:28px;font-size:15px}.list.s2 .chip .pl{display:none}
+.list.s3 .chip{font-size:12px;padding:1px 5px}.list.s3 .where{font-size:12.5px}.list.s3 .row{grid-template-columns:30px minmax(0,1fr)}
