@@ -82,3 +82,5 @@ html,body{margin:0;height:100%;background:#0b0c10;color:#f5f5f7;font:16px/1.4 -a
 .list.s1 .chip{font-size:14px;padding:2px 6px 2px 5px}.list.s1 .row{padding:5px 6px}.list.s1 .where{font-size:14px}
 .list.s2 .chip{font-size:13px}.list.s2 .row{padding:3px 6px;gap:8px}.list.s2 .num{width:28px;height:28px;font-size:15px}.list.s2 .chip .pl{display:none}
 .list.s3 .chip{font-size:12px;padding:1px 5px}.list.s3 .where{font-size:12.5px}.list.s3 .row{grid-template-columns:30px minmax(0,1fr)}
+/* someone beyond the framed area: still listed, number badge outlined */
+.list .row.off .num{background:transparent;box-shadow:inset 0 0 0 2px #8e8e93;color:#d1d1d6}

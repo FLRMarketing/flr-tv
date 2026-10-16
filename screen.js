@@ -108,10 +108,10 @@
       im ? h('img', { class: `vimg vk-${kind}`, src: im[1], alt: '' }) : null, h('span', { class: 'num' }, String(g.n))) });
   }
   function list(gs, total) {
-    const rows = gs.map(g => h('li', { class: `row${g.atBase ? ' base' : ''}` },
+    const rows = gs.map(g => h('li', { class: `row${g.atBase ? ' base' : ''}${g.off ? ' off' : ''}` },
       h('span', { class: 'num' }, String(g.n)),
       h('div', { class: 'who' },
-        h('div', { class: 'where' }, g.atBase ? `At FLR · B90 4NZ · ${g.vans.length}` : `${fmtMiles(g.miles)} mi from FLR`,
+        h('div', { class: 'where' }, g.atBase ? `At FLR · B90 4NZ · ${g.vans.length}` : `${fmtMiles(g.miles)} mi from FLR${g.off ? ' · off the map' : ''}`,
           g.vans.length === 1 ? h('span', { class: 'st' }, ` · ${stateOf(g.vans[0]).text}`) : null),
         h('div', { class: 'chips' }, g.vans.map(v => { const st = stateOf(v);
           return h('span', { class: `chip ${st.cls}`, title: st.text }, h('i', { class: 'dot' }), h('b', null, v.who || 'Unassigned'), h('span', { class: 'pl' }, v.plate || v.reg)); })),
@@ -134,18 +134,22 @@
     L.marker([BASE.lat, BASE.lon], { icon: L.divIcon({ className: 'sitemark', html: radar, iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: -1000 })
       .bindTooltip('FLR · B90 4NZ', { className: 'nm base', direction: 'bottom', offset: [0, 16], permanent: true }).addTo(layer);
     const vans = (d.vans || []).filter(v => Number.isFinite(v.lat) && Number.isFinite(v.lon) && !isNaN(new Date(v.seenAt)));
-    // Frame everyone (and B90 4NZ) in the space left of the list, then bunch at that zoom
-    const pts = [[BASE.lat, BASE.lon], ...vans.map(v => [v.lat, v.lon])];
+    // Frame B90 4NZ and everyone within 180 miles of it (England and Wales, roughly) in the space left of the list, then
+    // bunch at that zoom. Anyone further away (Scotland, say) is still in the list, marked "off the map".
+    const near = vans.filter(v => metres(BASE, v) <= FRAME_MI * 1609.34);
+    const pts = [[BASE.lat, BASE.lon], ...near.map(v => [v.lat, v.lon])];
     M.invalidateSize();
-    M.fitBounds(L.latLngBounds(pts).pad(0.06), { paddingTopLeft: [70, 130], paddingBottomRight: [LIST_W + 70, 70], maxZoom: 11, animate: false });
+    M.fitBounds(L.latLngBounds(pts).pad(0.04), { paddingTopLeft: [60, 150], paddingBottomRight: [LIST_W + 60, 40], maxZoom: 11, animate: false });
     const gs = bunches(vans);
-    for (const g of gs) L.marker([g.at.lat, g.at.lon], { icon: badgeIcon(g), interactive: false, keyboard: false, zIndexOffset: 500 - g.n }).addTo(layer);
+    const view = M.getBounds();
+    for (const g of gs) g.off = !view.contains([g.at.lat, g.at.lon]);
+    for (const g of gs.filter(x => !x.off)) L.marker([g.at.lat, g.at.lon], { icon: badgeIcon(g), interactive: false, keyboard: false, zIndexOffset: 500 - g.n }).addTo(layer);
     list(gs, vans.length);
     const ok = d.fleetviewAt ? new Date(d.fleetviewAt) : null;
     $('#status').textContent = `${vans.length} vehicles · FleetView ${ok ? fmtTime.format(ok) : '—'}`;
     $('#status').classList.toggle('stale', !ok || d.fleetviewFailing || Date.now() - ok > 15 * 60000);
   }
-  const LIST_W = 470;
+  const LIST_W = 470, FRAME_MI = 180;
 
   /* ---------------------------------------------------------------- reading */
   let sb = null, failures = 0;
