@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where everyone is · FLR</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' data: https://ibasemaps-api.arcgis.com https://static-map-tiles-api.arcgis.com https://server.arcgisonline.com; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<link rel="icon" href="flr-icon-192.png">
+<link rel="stylesheet" href="leaflet.min.css?v=1.9.4">
+<link rel="stylesheet" href="screen.css?v=1.0">
+<script src="config.js"></script>
+<script src="supabase-2.116.0.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous" defer></script>
+<script src="vehicles.js?v=1.0" defer></script>
+<script src="screen.js?v=1.0" defer></script>
+</head>
+<body>
+<!-- FLR TV: the office screen (AbleSign). The live map only: every vehicle with who is in it, and B90 4NZ.
+     Opened with the private screen link (…/flr-tv/#k=<key>) that a Super Admin makes; nothing here can be clicked. -->
+<div id="map" class="map" aria-label="Map of where everyone is"></div>
+<header class="bar">
+  <div class="title"><span class="brand">FLR</span><span>Where everyone is</span></div>
+  <div class="status" id="status">Loading…</div>
+  <div class="clock" id="clock"></div>
+</header>
+<div class="message" id="message" hidden><h1 id="msgTitle"></h1><p id="msgText"></p></div>
+</body>
+</html>
